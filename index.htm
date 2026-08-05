@@ -4,171 +4,486 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alex Trifiletti - Resume</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
+
     <style>
         * {
             box-sizing: border-box;
         }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: #2d3748;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 40px 20px;
-            background-color: #ffffff;
-        }
-        header {
-            border-bottom: 2px solid #1a365d;
-            padding-bottom: 12px;
-            margin-bottom: 24px;
-        }
-        h1 {
-            margin: 0 0 6px 0;
-            color: #1a365d;
-            font-size: 28px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .contact-info {
-            font-size: 14px;
-            color: #4a5568;
-        }
-        .contact-info a {
-            color: #2b6cb0;
-            text-decoration: none;
-        }
-        .contact-info a:hover {
-            text-decoration: underline;
-        }
-        section {
-            margin-bottom: 24px;
-        }
-        h2 {
-            font-size: 16px;
-            color: #1a365d;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 4px;
-            margin-top: 0;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .entry {
-            margin-bottom: 16px;
-        }
-        .entry-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            font-weight: 600;
-            margin-bottom: 2px;
-        }
-        .entry-title {
-            color: #2d3748;
-        }
-        .entry-date {
-            color: #718096;
-            font-weight: normal;
-            font-size: 14px;
-        }
-        .entry-subtitle {
-            font-style: italic;
-            color: #4a5568;
-            margin-bottom: 6px;
-        }
-        ul {
-            margin: 4px 0 12px 20px;
+            margin: 0;
             padding: 0;
+            background-color: #000000;
+            overflow: hidden; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
-        li {
-            margin-bottom: 4px;
+
+        #webgl-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
         }
-        p {
-            margin: 0 0 8px 0;
+
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffffff;
+            font-family: sans-serif;
+            pointer-events: none;
+            text-align: center;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .lil-gui {
+            --background-color: rgba(10, 15, 26, 0.85) !important;
+            --text-color: #e2e8f0 !important;
+            --title-background-color: rgba(26, 54, 93, 0.9) !important;
+            z-index: 100 !important;
         }
     </style>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
 </head>
 <body>
 
-    <header>
-        <h1>Alex Trifiletti</h1>
-        <div class="contact-info">
-            3421 Chase Court, Nazareth, Pennsylvania &bull; 570-497-7892 &bull; <a href="mailto:alextrif@icloud.com">alextrif@icloud.com</a>
-        </div>
-    </header>
+    <div id="webgl-container"></div>
+    <div id="loading">Decoding TIF Texture...</div>
 
-    <section id="overview-objective">
-        <h2>Overview &amp; Objective</h2>
-        <p>Motivated and eager to learn with a strong foundation in orderly time management and prioritization. High interest in pursuing Cybersecurity with a proven track record of academic excellence and consistency. To apply my experience in teamwork, technical troubleshooting, and project management to a challenging role while pursuing my degree at The Pennsylvania State University.</p>
-    </section>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
-    <section id="education">
-        <h2>Education</h2>
+        const TIF_FILE_PATH = 'eso0932a.tif';
+        const apiEndpoint = 'https://xwwvxanzrh.execute-api.us-east-2.amazonaws.com/count';
+
+        const container = document.getElementById('webgl-container');
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         
-        <div class="entry">
-            <div class="entry-header">
-                <span class="entry-title">The Pennsylvania State University, State College, Pennsylvania</span>
-                <span class="entry-date">Expected: June 2029</span>
-            </div>
-            <div class="entry-subtitle">College of Information Sciences and Technology; B.S. Cybersecurity Analytics and Operations</div>
-            <ul>
-                <li>GPA: 3.92</li>
-                <li>Dean's List Fall '25 and Spring '26</li>
-            </ul>
-        </div>
+        // Start exceptionally close to the black hole
+        camera.position.set(0, 0.1, 3.5);
 
-        <div class="entry">
-            <div class="entry-header">
-                <span class="entry-title">Nazareth Area High School, Nazareth, Pennsylvania</span>
-                <span class="entry-date">Graduated June 2025</span>
-            </div>
-            <ul>
-                <li>High School Grade Point Average: 4.00 (95%)</li>
-                <li>Honors: High Honor Roll Graduate</li>
-            </ul>
-        </div>
-    </section>
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0)); 
+        container.appendChild(renderer.domElement);
 
-    <section id="experience">
-        <h2>Experience</h2>
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.enablePan = false;
+        controls.minDistance = 1.01; 
+        controls.maxDistance = 20;
+
+        const vertexShader = `
+            varying vec2 vUv;
+            void main() {
+                vUv = uv;
+                gl_Position = vec4(position, 1.0);
+            }
+        `;
+
+        const fragmentShader = `
+            uniform float iTime;
+            uniform vec2 iResolution;
+            uniform sampler2D iChannel0;
+            uniform vec3 iCameraPos;
+            uniform vec3 iCameraDir;
+            uniform vec3 iCameraUp;
+            uniform vec3 iCameraRight;
+            
+            uniform float uGravity;
+            uniform float uDiscRadiusMin;
+            uniform float uDiscRadiusMax;
+            uniform float uDiscIntensity;
+            uniform vec3 uDiscColor;
+
+            varying vec2 vUv;
+
+            #define MAX_STEPS 40
+            #define MAX_DIST 30.0
+            #define PI 3.14159265
+
+            float hash(vec2 p) {
+                p = 50.0 * fract(p * 0.3183099 + vec2(0.71, 0.113));
+                return -1.0 + 2.0 * fract(p.x * p.y * (p.x + p.y));
+            }
+
+            float noise(vec2 p) {
+                vec2 i = floor(p);
+                vec2 f = fract(p);
+                vec2 u = f * f * (3.0 - 2.0 * f);
+                return mix(mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
+                           mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+            }
+
+            float fbm(vec2 p) {
+                float f = 0.0;
+                float m = 0.5;
+                for (int i = 0; i < 2; i++) {
+                    f += m * noise(p);
+                    p *= 2.0;
+                    m *= 0.5;
+                }
+                return f;
+            }
+
+            vec3 getBackground(vec3 dir) {
+                vec2 uv = vec2(0.5 + atan(dir.z, dir.x) / (2.0 * PI), 0.5 - asin(dir.y) / PI);
+                return texture2D(iChannel0, uv).rgb;
+            }
+
+            void main() {
+                vec2 uv = vUv * 2.0 - 1.0;
+                uv.x *= iResolution.x / iResolution.y;
+
+                vec3 ro = iCameraPos;
+                vec3 rd = normalize(iCameraDir + uv.x * iCameraRight + uv.y * iCameraUp);
+
+                vec3 col = vec3(0.0);
+                vec3 p = ro;
+                vec3 dir = rd;
+                
+                float accumulatedGlow = 0.0;
+                bool hitBlackHole = false;
+                
+                for(int i = 0; i < MAX_STEPS; i++) {
+                    float dist = length(p);
+
+                    if(dist < 1.0) {
+                        hitBlackHole = true;
+                        col = vec3(0.0);
+                        break;
+                    }
+                    
+                    if(dist > MAX_DIST) {
+                        break; 
+                    }
+
+                    float force = uGravity / (dist * dist);
+                    vec3 accel = -normalize(p) * force;
+                    
+                    dir = normalize(dir + accel * 0.2); 
+                    p += dir * 0.4; 
+
+                    float distToPlane = abs(p.y);
+                    float radius = length(p.xz);
+                    
+                    if(distToPlane < 0.2 && radius > uDiscRadiusMin && radius < uDiscRadiusMax) {
+                        float angle = atan(p.z, p.x);
+                        vec2 noiseUv = vec2(radius * 3.0, angle * 2.0 + iTime * (1.5/radius)); 
+                        
+                        float density = fbm(noiseUv);
+                        
+                        float fade = smoothstep(uDiscRadiusMin, uDiscRadiusMin + 0.5, radius) * smoothstep(uDiscRadiusMax, uDiscRadiusMax - 1.0, radius);
+                        float vFade = smoothstep(0.2, 0.0, distToPlane);
+
+                        float glow = density * fade * vFade * uDiscIntensity * 0.15; 
+                        accumulatedGlow += glow;
+                    }
+                }
+
+                if (!hitBlackHole) {
+                    col = getBackground(dir);
+                }
+
+                col += accumulatedGlow * uDiscColor;
+
+                gl_FragColor = vec4(col, 1.0);
+            }
+        `;
+
+        function wrapText(context, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '';
+            for(let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const metrics = context.measureText(testLine);
+                const testWidth = metrics.width;
+                if (testWidth > maxWidth && n > 0) {
+                    context.fillText(line, x, y);
+                    line = words[n] + ' ';
+                    y += lineHeight;
+                } else {
+                    line = testLine;
+                }
+            }
+            context.fillText(line, x, y);
+            return y + lineHeight;
+        }
+
+        const textCanvas = document.createElement('canvas');
+        textCanvas.width = 1024;
+        textCanvas.height = 1400;
+        const textCtx = textCanvas.getContext('2d');
+        const resumeTexture = new THREE.CanvasTexture(textCanvas);
         
-        <div class="entry">
-            <div class="entry-header">
-                <span class="entry-title">K &amp; J Party Rentals &mdash; Delivery Crew &amp; Setup Crew (Seasonal)</span>
-                <span class="entry-date">Fall 2024 to Present</span>
-            </div>
-            <ul>
-                <li>Worked in a three-person team setting up tents, tables, and bounce houses.</li>
-                <li>Developed attention to detail and experience with equipment assembly.</li>
-                <li>Maintained a position requiring teamwork, physical demand, and significant conscientiousness.</li>
-            </ul>
-        </div>
-    </section>
+        function drawResume(visitorCount = "Loading...") {
+            textCtx.clearRect(0, 0, textCanvas.width, textCanvas.height);
+            
+            textCtx.fillStyle = 'rgba(0, 0, 0, 0)'; 
+            textCtx.fillRect(0, 0, textCanvas.width, textCanvas.height);
 
-    <section id="activities">
-        <h2>Activities</h2>
-        <ul>
-            <li><strong>3D Printing:</strong> Experience with both filament and resin based 3D printers and associated slicing softwares.</li>
-            <li><strong>Weight Lifting:</strong> Dedicated to a journey involving extensive research and consistency to achieve tangible results.</li>
-            <li><strong>League Sim Racing:</strong> Gained experience in competitive environments, demonstrating that practice and competition are tools for improvement.</li>
-        </ul>
-    </section>
+            textCtx.fillStyle = '#63b3ed'; 
+            textCtx.font = 'bold 54px sans-serif';
+            textCtx.fillText('ALEX TRIFILETTI', 40, 80);
+            
+            textCtx.fillStyle = '#cbd5e0';
+            textCtx.font = '24px sans-serif';
+            textCtx.fillText('Nazareth, Pennsylvania • 570-497-7892 • alextrif@icloud.com', 40, 120);
 
-    <section id="skills">
-        <h2>Skills</h2>
-        <ul>
-            <li><strong>Communication:</strong> Ability to convey information in a clear and concise way.</li>
-            <li><strong>Technical:</strong> Competent with modern forms of technology and experienced with PC troubleshooting.</li>
-            <li>
-                <strong>Software/Platforms:</strong> Knowledge of modern tech platforms and security tools.
-                <ul>
-                    <li>Cisco Packet Tracer</li>
-                    <li>Wireshark</li>
-                    <li>VMware Fusion</li>
-                </ul>
-            </li>
-        </ul>
-    </section>
+            textCtx.fillStyle = '#63b3ed';
+            textCtx.font = 'bold 28px sans-serif';
+            textCtx.fillText('OVERVIEW & OBJECTIVE', 40, 200);
+            textCtx.fillStyle = '#e2e8f0';
+            textCtx.font = '22px sans-serif';
+            wrapText(textCtx, "Motivated and eager to learn with a strong foundation in orderly time management and prioritization. High interest in pursuing Cybersecurity with a proven track record of academic excellence and consistency. To apply my experience in teamwork, technical troubleshooting, and project management to a challenging role while pursuing my degree at The Pennsylvania State University.", 40, 240, 940, 32);
 
+            textCtx.fillStyle = '#63b3ed';
+            textCtx.font = 'bold 28px sans-serif';
+            textCtx.fillText('EDUCATION', 40, 420);
+            textCtx.fillStyle = '#f7fafc';
+            textCtx.font = 'bold 24px sans-serif';
+            textCtx.fillText('The Pennsylvania State University, State College, Pennsylvania', 40, 460);
+            textCtx.font = 'italic 22px sans-serif';
+            textCtx.fillStyle = '#cbd5e0';
+            textCtx.fillText('College of Information Sciences and Technology; B.S. Cybersecurity', 40, 495);
+            textCtx.fillStyle = '#e2e8f0';
+            textCtx.font = '22px sans-serif';
+            textCtx.fillText('• GPA: 3.92', 60, 530);
+            textCtx.fillText("• Dean's List Fall '25 and Spring '26", 60, 565);
+            
+            textCtx.fillStyle = '#f7fafc';
+            textCtx.font = 'bold 24px sans-serif';
+            textCtx.fillText('Nazareth Area High School, Nazareth, Pennsylvania', 40, 620);
+            textCtx.fillStyle = '#e2e8f0';
+            textCtx.font = '22px sans-serif';
+            textCtx.fillText('• High School Grade Point Average: 4.00 (95%)', 60, 655);
+            textCtx.fillText('• Honors: High Honor Roll Graduate', 60, 690);
+
+            textCtx.fillStyle = '#63b3ed';
+            textCtx.font = 'bold 28px sans-serif';
+            textCtx.fillText('EXPERIENCE', 40, 770);
+            textCtx.fillStyle = '#f7fafc';
+            textCtx.font = 'bold 24px sans-serif';
+            textCtx.fillText('K & J Party Rentals — Delivery & Setup Crew (Seasonal)', 40, 810);
+            textCtx.fillStyle = '#e2e8f0';
+            textCtx.font = '22px sans-serif';
+            textCtx.fillText('• Worked in a three-person team setting up tents, tables, and bounce houses.', 60, 845);
+            textCtx.fillText('• Developed attention to detail and experience with equipment assembly.', 60, 880);
+            textCtx.fillText('• Maintained a position requiring teamwork and physical demand.', 60, 915);
+
+            textCtx.fillStyle = '#63b3ed';
+            textCtx.font = 'bold 28px sans-serif';
+            textCtx.fillText('ACTIVITIES', 40, 995);
+            textCtx.fillStyle = '#e2e8f0';
+            textCtx.font = '22px sans-serif';
+            textCtx.fillText('• 3D Printing: Experience with filament/resin printers and slicing software.', 40, 1035);
+            textCtx.fillText('• Weight Lifting: Dedicated to extensive research and consistency for results.', 40, 1070);
+            textCtx.fillText('• League Sim Racing: Experience in competitive environments.', 40, 1105);
+
+            textCtx.fillStyle = '#63b3ed';
+            textCtx.font = 'bold 28px sans-serif';
+            textCtx.fillText('SKILLS', 40, 1185);
+            textCtx.fillStyle = '#e2e8f0';
+            textCtx.font = '22px sans-serif';
+            textCtx.fillText('• Communication: Convey information in a clear and concise way.', 40, 1225);
+            textCtx.fillText('• Technical: Competent with technology and PC troubleshooting.', 40, 1260);
+            textCtx.fillText('• Software/Platforms: Cisco Packet Tracer, Wireshark, VMware Fusion.', 40, 1295);
+
+            textCtx.fillStyle = '#63b3ed';
+            textCtx.font = 'bold 24px sans-serif';
+            textCtx.fillText(`Page views: ${visitorCount}`, 40, 1370);
+
+            resumeTexture.needsUpdate = true;
+        }
+
+        drawResume();
+
+        async function fetchVisitorCount() {
+            try {
+                let response = await fetch(apiEndpoint);
+                let data = await response.json();
+                drawResume(data.count); 
+            } catch (error) {
+                console.error('Error fetching visitor count:', error);
+                drawResume("Error loading count");
+            }
+        }
+        fetchVisitorCount();
+
+        const resumeMaterial = new THREE.MeshBasicMaterial({ 
+            map: resumeTexture, 
+            transparent: true,
+            opacity: 1.0,
+            depthWrite: false 
+        });
+        
+        const resumeMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.06, 1.45), resumeMaterial);
+        
+        // Centered behind the black hole at radius 2 (safely outside event horizon 1.0)
+        resumeMesh.position.set(0.06, 0, 2); 
+        resumeMesh.rotation.set(0, 0, 0); // Perfectly facing forward
+        
+        scene.add(resumeMesh);
+
+        fetch(TIF_FILE_PATH)
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+                return response.arrayBuffer();
+            })
+            .then(buffer => {
+                const ifds = UTIF.decode(buffer);
+                UTIF.decodeImage(buffer, ifds[0]);
+                const rgba = UTIF.toRGBA8(ifds[0]);
+                const texture = new THREE.DataTexture(rgba, ifds[0].width, ifds[0].height, THREE.RGBAFormat);
+                texture.wrapS = THREE.RepeatWrapping;
+                texture.wrapT = THREE.ClampToEdgeWrapping;
+                texture.minFilter = THREE.LinearFilter;
+                texture.magFilter = THREE.LinearFilter;
+                texture.needsUpdate = true;
+                document.getElementById('loading').style.display = 'none';
+                initSim(texture);
+            })
+            .catch(err => {
+                document.getElementById('loading').innerText = "TIF Error. Generating Starfield...";
+                const canvas = document.createElement('canvas');
+                canvas.width = 1024; canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, 1024, 512);
+                ctx.fillStyle = '#FFFFFF';
+                for(let i = 0; i < 600; i++) {
+                    ctx.beginPath();
+                    ctx.arc(Math.random() * 1024, Math.random() * 512, Math.random() * 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                const dummyTex = new THREE.CanvasTexture(canvas);
+                dummyTex.wrapS = THREE.RepeatWrapping;
+                dummyTex.wrapT = THREE.ClampToEdgeWrapping;
+                setTimeout(() => {
+                    document.getElementById('loading').style.display = 'none';
+                    initSim(dummyTex);
+                }, 500);
+            });
+
+        function initSim(bgTexture) {
+            const geometry = new THREE.PlaneGeometry(2, 2);
+
+            const uniforms = {
+                iTime: { value: 0 },
+                iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                iChannel0: { value: bgTexture },
+                iCameraPos: { value: new THREE.Vector3() },
+                iCameraDir: { value: new THREE.Vector3() },
+                iCameraUp: { value: new THREE.Vector3() },
+                iCameraRight: { value: new THREE.Vector3() },
+                uGravity: { value: 3.0 },
+                uDiscRadiusMin: { value: 2.5 },
+                uDiscRadiusMax: { value: 6.0 },
+                uDiscIntensity: { value: 1.5 },
+                uDiscColor: { value: new THREE.Color(1.0, 0.6, 0.2) }
+            };
+
+            const shaderMaterial = new THREE.ShaderMaterial({
+                vertexShader: vertexShader,
+                fragmentShader: fragmentShader,
+                uniforms: uniforms,
+                depthWrite: false,
+                depthTest: false
+            });
+
+            const bgMesh = new THREE.Mesh(geometry, shaderMaterial);
+            bgMesh.renderOrder = -1; 
+            scene.add(bgMesh);
+
+            const gui = new GUI({ title: "Black Hole Controls" });
+            const physicsFolder = gui.addFolder('Physics');
+            physicsFolder.add(uniforms.uGravity, 'value', 0.0, 10.0).name('Gravity Strength');
+            physicsFolder.open();
+
+            const discFolder = gui.addFolder('Accretion Disc');
+            discFolder.add(uniforms.uDiscRadiusMin, 'value', 1.1, 4.0).name('Inner Radius');
+            discFolder.add(uniforms.uDiscRadiusMax, 'value', 4.0, 10.0).name('Outer Radius');
+            discFolder.add(uniforms.uDiscIntensity, 'value', 0.0, 10.0).name('Brightness');
+            
+            const params = { color: 0xff9933 }; 
+            discFolder.addColor(params, 'color').name('Disc Color').onChange((val) => {
+                uniforms.uDiscColor.value.setHex(val);
+            });
+            discFolder.open();
+
+            const clock = new THREE.Clock();
+            const cameraDir = new THREE.Vector3();
+            const cameraUp = new THREE.Vector3();
+            const cameraRight = new THREE.Vector3();
+
+            const eventHorizon = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 1.35); 
+            const ray = new THREE.Ray();
+            const intersectionPoint = new THREE.Vector3();
+
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+
+                uniforms.iTime.value = clock.getElapsedTime();
+                uniforms.iCameraPos.value.copy(camera.position);
+
+                camera.getWorldDirection(cameraDir);
+                cameraDir.normalize();
+                cameraRight.crossVectors(cameraDir, camera.up).normalize();
+                cameraUp.crossVectors(cameraRight, cameraDir).normalize();
+
+                uniforms.iCameraDir.value.copy(cameraDir);
+                uniforms.iCameraUp.value.copy(cameraUp);
+                uniforms.iCameraRight.value.copy(cameraRight);
+
+                ray.origin.copy(camera.position);
+                ray.direction.copy(resumeMesh.position).sub(camera.position).normalize();
+
+                const isIntersecting = ray.intersectSphere(eventHorizon, intersectionPoint);
+                const distToText = camera.position.distanceTo(resumeMesh.position);
+
+                if (isIntersecting && camera.position.distanceTo(intersectionPoint) < distToText) {
+                    resumeMesh.material.opacity = THREE.MathUtils.lerp(resumeMesh.material.opacity, 0.0, 0.15);
+                } else {
+                    resumeMesh.material.opacity = THREE.MathUtils.lerp(resumeMesh.material.opacity, 1.0, 0.15);
+                }
+
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            scene.children.forEach(child => {
+                if (child.material.uniforms && child.material.uniforms.iResolution) {
+                    child.material.uniforms.iResolution.value.set(window.innerWidth, window.innerHeight);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
