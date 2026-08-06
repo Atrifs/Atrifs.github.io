@@ -44,13 +44,6 @@
             border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
-
-        .lil-gui {
-            --background-color: rgba(10, 15, 26, 0.85) !important;
-            --text-color: #e2e8f0 !important;
-            --title-background-color: rgba(26, 54, 93, 0.9) !important;
-            z-index: 100 !important;
-        }
     </style>
 
     <script type="importmap">
@@ -70,7 +63,6 @@
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
         const TIF_FILE_PATH = 'eso0932a.tif';
         const apiEndpoint = 'https://xwwvxanzrh.execute-api.us-east-2.amazonaws.com/count';
@@ -80,7 +72,6 @@
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         
-        // Start exceptionally close to the black hole
         camera.position.set(0, 0.1, 3.5);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -113,14 +104,19 @@
             uniform vec3 iCameraRight;
             
             uniform float uGravity;
+            uniform float uAccelScale;
+            uniform float uStepSize;
             uniform float uDiscRadiusMin;
             uniform float uDiscRadiusMax;
+            uniform float uDiscThickness;
             uniform float uDiscIntensity;
-            uniform vec3 uDiscColor;
+            uniform float uOrbitalSpeed;
+            uniform float uNoiseScale;
+            uniform float uDopplerStrength;
 
             varying vec2 vUv;
 
-            #define MAX_STEPS 40
+            #define MAX_STEPS 45
             #define MAX_DIST 30.0
             #define PI 3.14159265
 
@@ -140,7 +136,7 @@
             float fbm(vec2 p) {
                 float f = 0.0;
                 float m = 0.5;
-                for (int i = 0; i < 2; i++) {
+                for (int i = 0; i < 3; i++) {
                     f += m * noise(p);
                     p *= 2.0;
                     m *= 0.5;
@@ -164,7 +160,7 @@
                 vec3 p = ro;
                 vec3 dir = rd;
                 
-                float accumulatedGlow = 0.0;
+                vec3 accumulatedGlow = vec3(0.0);
                 bool hitBlackHole = false;
                 
                 for(int i = 0; i < MAX_STEPS; i++) {
@@ -172,7 +168,6 @@
 
                     if(dist < 1.0) {
                         hitBlackHole = true;
-                        col = vec3(0.0);
                         break;
                     }
                     
@@ -183,31 +178,50 @@
                     float force = uGravity / (dist * dist);
                     vec3 accel = -normalize(p) * force;
                     
-                    dir = normalize(dir + accel * 0.2); 
-                    p += dir * 0.4; 
+                    dir = normalize(dir + accel * uAccelScale); 
+                    p += dir * uStepSize; 
 
                     float distToPlane = abs(p.y);
                     float radius = length(p.xz);
                     
-                    if(distToPlane < 0.2 && radius > uDiscRadiusMin && radius < uDiscRadiusMax) {
+                    if(distToPlane < uDiscThickness && radius > uDiscRadiusMin && radius < uDiscRadiusMax) {
                         float angle = atan(p.z, p.x);
-                        vec2 noiseUv = vec2(radius * 3.0, angle * 2.0 + iTime * (1.5/radius)); 
                         
-                        float density = fbm(noiseUv);
+                        float orbitalSpeedFactor = uOrbitalSpeed * pow(radius, -1.5); 
                         
-                        float fade = smoothstep(uDiscRadiusMin, uDiscRadiusMin + 0.5, radius) * smoothstep(uDiscRadiusMax, uDiscRadiusMax - 1.0, radius);
-                        float vFade = smoothstep(0.2, 0.0, distToPlane);
+                        vec2 uvNoise = vec2(radius * uNoiseScale, angle * 2.0 - iTime * orbitalSpeedFactor);
+                        float cloudBase = 0.4 + 0.6 * fbm(uvNoise);
+                        
+                        float radialFade = smoothstep(uDiscRadiusMin, uDiscRadiusMin + 0.5, radius) * smoothstep(uDiscRadiusMax, uDiscRadiusMax - 1.5, radius);
+                        float verticalFade = exp(-distToPlane * 10.0); 
 
-                        float glow = density * fade * vFade * uDiscIntensity * 0.15; 
-                        accumulatedGlow += glow;
+                        float density = cloudBase * radialFade * verticalFade;
+
+                        vec3 gasVelocity = normalize(vec3(-p.z, 0.0, p.x));
+                        float dotV = dot(dir, gasVelocity);
+                        float doppler = 1.0 - dotV * uDopplerStrength; 
+                        float beaming = pow(doppler, 3.0); 
+
+                        float normalizedRadius = (radius - uDiscRadiusMin) / (uDiscRadiusMax - uDiscRadiusMin);
+                        vec3 hotColor = vec3(1.0, 0.7, 0.15);   
+                        vec3 midColor = vec3(1.0, 0.35, 0.02);  
+                        vec3 coldColor = vec3(0.5, 0.05, 0.0);  
+                        
+                        vec3 localColor = mix(hotColor, midColor, smoothstep(0.0, 0.4, normalizedRadius));
+                        localColor = mix(localColor, coldColor, smoothstep(0.4, 1.0, normalizedRadius));
+                        
+                        accumulatedGlow += localColor * density * beaming * uDiscIntensity * 0.015;
                     }
                 }
 
                 if (!hitBlackHole) {
                     col = getBackground(dir);
+                } else {
+                    col = vec3(0.0);
                 }
 
-                col += accumulatedGlow * uDiscColor;
+                col += accumulatedGlow;
+                col = vec3(1.0) - exp(-col * 1.5);
 
                 gl_FragColor = vec4(col, 1.0);
             }
@@ -340,11 +354,8 @@
         });
         
         const resumeMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.06, 1.45), resumeMaterial);
-        
-        // Centered behind the black hole at radius 2 (safely outside event horizon 1.0)
         resumeMesh.position.set(0.06, 0, 2); 
-        resumeMesh.rotation.set(0, 0, 0); // Perfectly facing forward
-        
+        resumeMesh.rotation.set(0, 0, 0); 
         scene.add(resumeMesh);
 
         fetch(TIF_FILE_PATH)
@@ -398,10 +409,15 @@
                 iCameraUp: { value: new THREE.Vector3() },
                 iCameraRight: { value: new THREE.Vector3() },
                 uGravity: { value: 3.0 },
-                uDiscRadiusMin: { value: 2.5 },
-                uDiscRadiusMax: { value: 6.0 },
-                uDiscIntensity: { value: 1.5 },
-                uDiscColor: { value: new THREE.Color(1.0, 0.6, 0.2) }
+                uAccelScale: { value: 0.2 },
+                uStepSize: { value: 0.4 },
+                uDiscRadiusMin: { value: 2.4 },
+                uDiscRadiusMax: { value: 9.0 },
+                uDiscThickness: { value: 0.25 },
+                uDiscIntensity: { value: 8.0 },
+                uOrbitalSpeed: { value: 1.8 },
+                uNoiseScale: { value: 2.5 },
+                uDopplerStrength: { value: 0.18 }
             };
 
             const shaderMaterial = new THREE.ShaderMaterial({
@@ -415,22 +431,6 @@
             const bgMesh = new THREE.Mesh(geometry, shaderMaterial);
             bgMesh.renderOrder = -1; 
             scene.add(bgMesh);
-
-            const gui = new GUI({ title: "Black Hole Controls" });
-            const physicsFolder = gui.addFolder('Physics');
-            physicsFolder.add(uniforms.uGravity, 'value', 0.0, 10.0).name('Gravity Strength');
-            physicsFolder.open();
-
-            const discFolder = gui.addFolder('Accretion Disc');
-            discFolder.add(uniforms.uDiscRadiusMin, 'value', 1.1, 4.0).name('Inner Radius');
-            discFolder.add(uniforms.uDiscRadiusMax, 'value', 4.0, 10.0).name('Outer Radius');
-            discFolder.add(uniforms.uDiscIntensity, 'value', 0.0, 10.0).name('Brightness');
-            
-            const params = { color: 0xff9933 }; 
-            discFolder.addColor(params, 'color').name('Disc Color').onChange((val) => {
-                uniforms.uDiscColor.value.setHex(val);
-            });
-            discFolder.open();
 
             const clock = new THREE.Clock();
             const cameraDir = new THREE.Vector3();
