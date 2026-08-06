@@ -44,6 +44,13 @@
             border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
+
+        .lil-gui {
+            --background-color: rgba(10, 15, 26, 0.85) !important;
+            --text-color: #e2e8f0 !important;
+            --title-background-color: rgba(26, 54, 93, 0.9) !important;
+            z-index: 100 !important;
+        }
     </style>
 
     <script type="importmap">
@@ -63,6 +70,7 @@
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
         const TIF_FILE_PATH = 'eso0932a.tif';
         const apiEndpoint = 'https://xwwvxanzrh.execute-api.us-east-2.amazonaws.com/count';
@@ -187,6 +195,7 @@
                     if(distToPlane < uDiscThickness && radius > uDiscRadiusMin && radius < uDiscRadiusMax) {
                         float angle = atan(p.z, p.x);
                         
+                        // Keplerian orbital speed
                         float orbitalSpeedFactor = uOrbitalSpeed * pow(radius, -1.5); 
                         
                         vec2 uvNoise = vec2(radius * uNoiseScale, angle * 2.0 - iTime * orbitalSpeedFactor);
@@ -197,11 +206,13 @@
 
                         float density = cloudBase * radialFade * verticalFade;
 
+                        // Doppler beaming asymmetry
                         vec3 gasVelocity = normalize(vec3(-p.z, 0.0, p.x));
                         float dotV = dot(dir, gasVelocity);
                         float doppler = 1.0 - dotV * uDopplerStrength; 
                         float beaming = pow(doppler, 3.0); 
 
+                        // Hot-to-cold color gradient palette
                         float normalizedRadius = (radius - uDiscRadiusMin) / (uDiscRadiusMax - uDiscRadiusMin);
                         vec3 hotColor = vec3(1.0, 0.7, 0.15);   
                         vec3 midColor = vec3(1.0, 0.35, 0.02);  
@@ -431,6 +442,28 @@
             const bgMesh = new THREE.Mesh(geometry, shaderMaterial);
             bgMesh.renderOrder = -1; 
             scene.add(bgMesh);
+
+            // Comprehensive GUI for every variable
+            const gui = new GUI({ title: "Black Hole Tuner" });
+            
+            const physicsFolder = gui.addFolder('Physics & Raymarching');
+            physicsFolder.add(uniforms.uGravity, 'value', 0.0, 10.0).name('Gravity Strength');
+            physicsFolder.add(uniforms.uAccelScale, 'value', 0.05, 0.8).name('Bend / Accel Factor');
+            physicsFolder.add(uniforms.uStepSize, 'value', 0.1, 1.0).name('Step Size');
+            physicsFolder.open();
+
+            const discFolder = gui.addFolder('Accretion Disc Geometry');
+            discFolder.add(uniforms.uDiscRadiusMin, 'value', 1.1, 4.0).name('Inner Radius');
+            discFolder.add(uniforms.uDiscRadiusMax, 'value', 4.0, 15.0).name('Outer Radius');
+            discFolder.add(uniforms.uDiscThickness, 'value', 0.05, 0.8).name('Disc Thickness');
+            discFolder.open();
+
+            const dynamicsFolder = gui.addFolder('Disc Dynamics & Lighting');
+            dynamicsFolder.add(uniforms.uDiscIntensity, 'value', 0.0, 25.0).name('Brightness');
+            dynamicsFolder.add(uniforms.uOrbitalSpeed, 'value', 0.0, 5.0).name('Orbital Speed');
+            dynamicsFolder.add(uniforms.uNoiseScale, 'value', 0.5, 8.0).name('Noise Frequency');
+            dynamicsFolder.add(uniforms.uDopplerStrength, 'value', 0.0, 0.5).name('Doppler Beaming');
+            dynamicsFolder.open();
 
             const clock = new THREE.Clock();
             const cameraDir = new THREE.Vector3();
