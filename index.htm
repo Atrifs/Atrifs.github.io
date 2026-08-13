@@ -214,14 +214,21 @@
                     }
                 }
 
+                // Get the background or black hole center
+                
                 if (!hitBlackHole) {
                     col = getBackground(dir);
                 } else {
                     col = vec3(0.0);
                 }
 
+                // Apply the tone mapping ONLY to the bright glow
+                
+                accumulatedGlow = vec3(1.0) - exp(-accumulatedGlow * 1.5);
+
+                // Add the tone-mapped glow on top of the untouched background
+                
                 col += accumulatedGlow;
-                col = vec3(1.0) - exp(-col * 1.5);
 
                 gl_FragColor = vec4(col, 1.0);
             }
@@ -413,8 +420,8 @@
                 uStepSize: { value: 0.6 },
                 uDiscRadiusMin: { value: 2.4 },
                 uDiscRadiusMax: { value: 9.0 },
-                uDiscThickness: { value: 0.8 },
-                uDiscIntensity: { value: 30.0 },
+                uDiscThickness: { value: 1.5 },
+                uDiscIntensity: { value: 40.0 },
                 uOrbitalSpeed: { value: 1.8 },
                 uNoiseScale: { value: 2.5 },
                 uDopplerStrength: { value: 0.2 }
